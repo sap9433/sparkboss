@@ -1,0 +1,59 @@
+Properties passwords = new Properties()
+File propertiesFile = new File('password.properties')
+propertiesFile.withInputStream {
+    passwords.load(it)
+}
+
+task build(type: GradleBuild, overwrite: true) {
+    tasks = ['assemble','classes', 'jar']
+}
+
+
+task dmEncounterCasesLoad(){
+    dependsOn 'clean'
+    dependsOn 'build'
+    tasks.findByName('build').mustRunAfter 'clean'
+    doLast {
+        ssh.run {
+            session(remotes.aws) {
+                put from: './build/libs/sparkboss-1.0-SNAPSHOT.jar', into: '/home/ec2-user'
+                put from: './runTimeDependency/phoenix-spark-5.0.0-HBase-2.0.jar', into: '/home/ec2-user'
+                put from: './runTimeDependency/phoenix-core-5.0.0-HBase-2.0.jar', into: '/home/ec2-user'
+                execute 'scp -P 2222 /home/ec2-user/phoenix-core-5.0.0-HBase-2.0.jar root@localhost:/root'
+                execute 'scp -P 2222 /home/ec2-user/phoenix-spark-5.0.0-HBase-2.0.jar root@localhost:/root'
+                execute 'scp -P 2222 /home/ec2-user/sparkboss-1.0-SNAPSHOT.jar root@localhost:/root'
+                execute 'spark-submit --class \'LoadPhysicianMaster\' --jars phoenix-spark-5.0.0-HBase-2.0.jar,phoenix-core-5.0.0-HBase-2.0.jar --master local ./sparkboss-1.0-SNAPSHOT.jar'
+            }
+        }
+    }
+}
+
+
+
+task seedPhoenix(){
+    dependsOn 'clean'
+    dependsOn 'build'
+    tasks.findByName('build').mustRunAfter 'clean'
+    doLast {
+        ssh.run {
+            session(remotes.localhdp) {
+                put from: './runTimeDependency/guava-19.0.jar', into: '/root'
+                put from: './runTimeDependency/phoenix-spark-5.0.0-HBase-2.0.jar', into: '/root'
+                put from: './runTimeDependency/commons-logging-1.2.jar', into: '/root'
+                put from: './runTimeDependency/slf4j-api-1.7.26.jar', into: '/root'
+                put from: './runTimeDependency/phoenix-core-5.0.0-HBase-2.0.jar', into: '/root'
+                put from: './runTimeDependency/hbase-client-2.2.0.jar', into: '/root'
+                put from: './build/libs/PASpark-1.0-SNAPSHOT.jar', into: '/root'
+                put from: './src/main/resources/db/seedFiles/localseed.sql', into: '/root'
+                execute 'export HADOOP_CLASSPATH=$HADOOP_CLASSPATH:/usr/hdp/current/hadoop/:/usr/hdp/current/hbase-client/lib/*'
+                execute 'java -cp ".:$(hbase classpath):$(hadoop classpath):./hbase-client-2.2.0.jar:./phoenix-core-5.0.0-HBase-2.0.jar:./PASpark-1.0-SNAPSHOT.jar:./guava-19.0.jar:./commons-logging-1.2.jar:./slf4j-api-1.7.26.jar:./phoenix-spark-5.0.0-HBase-2.0.jar" processing.SeedPhoenix'
+            }
+        }
+    }
+}
+
+task testAllLocal(type: GradleBuild) {
+    tasks = ['clean', 'build', 'seedPhoenix', 'dmEncounterCasesLoad', 'dmLoadPhysicianMaster', 'test']
+}
+
+

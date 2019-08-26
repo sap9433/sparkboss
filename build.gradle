@@ -1,0 +1,32 @@
+plugins {
+    id 'java'
+    id 'org.hidetake.ssh' version '2.10.1'
+}
+
+group 'com.sapy'
+version '1.0-SNAPSHOT'
+
+sourceCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+}
+
+fileTree('pipelines').each { apply from: "${it}" }
+
+dependencies {
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+    compile group: 'org.apache.spark', name: 'spark-core_2.11', version: '2.2.0'
+    // https://mvnrepository.com/artifact/org.apache.spark/spark-sql
+    compile group: 'org.apache.spark', name: 'spark-sql_2.12', version: '2.4.3'
+    testCompile group: 'com.microsoft.sqlserver', name: 'mssql-jdbc', version: '7.4.0.jre8'
+//    // https://mvnrepository.com/artifact/org.apache.hbase/hbase
+//    compile group: 'org.apache.hbase', name: 'hbase', version: '2.2.0', ext: 'pom'
+//    compile group: 'org.apache.hbase', name: 'hbase-server', version: '2.2.0'
+//    // https://mvnrepository.com/artifact/org.apache.phoenix/phoenix-core
+//    compile group: 'org.apache.phoenix', name: 'phoenix-core', version: '5.0.0-HBase-2.0'
+}
+
+ssh.settings {
+    dryRun = project.hasProperty('dryRun')
+}

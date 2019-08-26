@@ -1,0 +1,21 @@
+Properties passwords = new Properties()
+File propertiesFile = new File('password.properties')
+propertiesFile.withInputStream {
+    passwords.load(it)
+}
+
+remotes {
+    aws {
+        role 'SparkSubmit'
+        host = 'ec2-3-90-87-40.compute-1.amazonaws.com'
+        user = 'ec2-user'
+        identity = file('sapedu.pem')
+    }
+    localhdp {
+        role 'SparkSubmit'
+        host = 'localhost'
+        port = 2222
+        user = 'root'
+        password = 'Iamoptra9*'
+    }
+}
